@@ -1,5 +1,6 @@
 # eval-logger
 this is a tool to deobfuscate php script who use eval in the technique, it return original string from the eval, so no matter how much you use eval, it will useless
+for php7 use [evalhook](https://github.com/Cvar1984/evalhook)
 # Install
 ```sh
 sudo dnf install php-devel php-pear gcc make autoconf
