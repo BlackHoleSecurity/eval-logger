@@ -12,7 +12,7 @@ static zend_op_array* (*original_compile_string)(zend_string *, const char *, ze
 static void log_eval_string(zend_string *source_string)
 {
     // Open eval_log.txt for writing in binary mode. Overwrites on each call.
-    php_stream *stream = php_stream_open_wrapper("eval_log.txt", "wb", REPORT_ERRORS, NULL);
+    php_stream *stream = php_stream_open_wrapper("/tmp/eval_log", "wb", REPORT_ERRORS, NULL);
     if (stream) {
         // Write the raw eval string contents to the file
         php_stream_write(stream, ZSTR_VAL(source_string), ZSTR_LEN(source_string));

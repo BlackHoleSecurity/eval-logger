@@ -45,12 +45,12 @@ To analyze a PHP file (e.g., `webshell.php`):
     php -d extension=/full/path/to/eval_logger.so /full/path/to/webshell.php
     
 
-After execution, the evaluated strings will be logged to `eval_log.txt` in the current working directory.
+After execution, the evaluated strings will be logged to `/tmp/eval_log` in the current working directory.
 
 **Example:**
 
     php -d extension=/home/user/eval-logger/modules/eval_logger.so ~/Downloads/webshell.php
-    cat eval_log.txt
+    cat /tmp/eval_log
     
 
 * * *
@@ -58,7 +58,7 @@ After execution, the evaluated strings will be logged to `eval_log.txt` in the c
 📎 Notes
 --------
 
-*   The logger **overwrites** `eval_log.txt` on every run (can be customized in source).
+*   The logger **overwrites** `/tmp/eval_log` on every run (can be customized in source).
 *   Only logs runtime-evaluated strings (e.g., `eval(base64_decode(...))`).
 *   For maximum visibility, ensure the script being analyzed actually executes all evals (some may be conditionally triggered).
 
