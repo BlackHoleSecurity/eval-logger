@@ -31,9 +31,15 @@ For PHP 7.x, use the legacy tool: [evalhook (PHP 7)](https://github.com/Cvar1984
         phpize
         ./configure --enable-eval_logger
         make
-    
+        sudo make install
 
-**Note:** After building, the shared object (`eval_logger.so`) will be available inside the `modules/` directory.
+3.  **Check installed modules**:
+    
+        php -m
+        [PHP Modules]
+        eval_logger
+
+**Note:** After building, the shared object (`eval_logger.so`) will be available inside the `modules/` and after installing it will also available inside ` /usr/lib64/php/modules/` directory.
 
 * * *
 
@@ -41,16 +47,20 @@ For PHP 7.x, use the legacy tool: [evalhook (PHP 7)](https://github.com/Cvar1984
 -------
 
 To analyze a PHP file (e.g., `webshell.php`):
+inline hot test (no installing)
 
     php -d extension=/full/path/to/eval_logger.so /full/path/to/webshell.php
     
+installed to ` /usr/lib64/php/modules/`
 
-After execution, the evaluated strings will be logged to `/tmp/eval_log` in the current working directory.
+    php /path/to/webshell.php
+    
+After execution, the evaluated strings will be logged to `error_log = ` set in `php.ini`
 
 **Example:**
 
     php -d extension=/home/user/eval-logger/modules/eval_logger.so ~/Downloads/webshell.php
-    cat /tmp/eval_log
+    cat ./error_log
     
 
 * * *
@@ -58,7 +68,7 @@ After execution, the evaluated strings will be logged to `/tmp/eval_log` in the 
 📎 Notes
 --------
 
-*   The logger **overwrites** `/tmp/eval_log` on every run (can be customized in source).
+*   The logger **appends** logs file set in `error_log = ` on every run (can be customized in source).
 *   Only logs runtime-evaluated strings (e.g., `eval(base64_decode(...))`).
 *   For maximum visibility, ensure the script being analyzed actually executes all evals (some may be conditionally triggered).
 
