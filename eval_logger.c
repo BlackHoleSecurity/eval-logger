@@ -1,8 +1,10 @@
 #include "php.h"                // Core PHP API
 #include "zend_compile.h"      // Zend compilation engine API
 #include "php_streams.h"       // PHP stream wrapper for file operations
+#include "SAPI.h"
 #include <stdio.h>
 #include <string.h>
+    extern sapi_module_struct sapi_module;
 
 static int ask_user_permission(zend_string *source_string)
 {
@@ -49,10 +51,14 @@ static zend_op_array* eval_logger_compile_string(zend_string *source_string, con
 {
     log_eval_string(source_string);
 
+    // Only ask if running under CLI
+if (sapi_module.name && strcmp(sapi_module.name, "cli") == 0) {
     if (!ask_user_permission(source_string)) {
-        php_error_docref(NULL, E_WARNING, "Eval execution denied by eval_logger");
+        php_error_docref(NULL, E_WARNING,
+            "Eval execution denied by eval_logger");
         return NULL; // block eval
     }
+}
 
     return original_compile_string(source_string, filename, compile_pos);
 }
