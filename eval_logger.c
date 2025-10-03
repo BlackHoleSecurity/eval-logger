@@ -1,7 +1,8 @@
-#include "php.h"          // Core PHP API
-#include "zend_compile.h" // Zend compilation engine API
-#include "php_streams.h"  // PHP stream wrapper for file operations
-#include "SAPI.h"
+#include "php.h"            // Core PHP API
+#include "zend_compile.h"   // Zend compilation engine API
+#include "php_streams.h"    // PHP stream wrapper for file operations
+#include "zend_smart_str.h" // Smart string handling
+#include "SAPI.h"           // Server API for PHP
 #include <stdio.h>
 #include <string.h>
 
@@ -32,17 +33,21 @@ static zend_op_array *(*original_compile_string)(zend_string *, const char *, ze
  * Log the string passed to eval() into a file.
  * This function opens a stream to "eval_log.txt", writes the string, and closes the stream.
  */
-static void log_eval_string(zend_string *source_string)
+static void log_eval_string(zend_string *source_string, int allowed)
 {
-    // Open eval_log.txt for writing in binary mode. Overwrites on each call.
-    php_stream *stream = php_stream_open_wrapper("/tmp/eval_log", "wb", REPORT_ERRORS, NULL);
-    if (stream)
+    smart_str message = {0};
+
+    smart_str_appends(&message, "[EVAL_LOGGER_BEGIN]\n");
+    smart_str_append(&message, source_string);
+    smart_str_appends(&message, "\n[EVAL_LOGGER_END]");
+    smart_str_0(&message); // null terminate
+
+    if (ZSTR_LEN(message.s) > 0)
     {
-        // Write the raw eval string contents to the file
-        php_stream_write(stream, ZSTR_VAL(source_string), ZSTR_LEN(source_string));
-        php_stream_write(stream, "\n", 1); // Append newline
-        php_stream_close(stream);          // Close the stream
+        php_log_err(ZSTR_VAL(message.s));
     }
+
+    smart_str_free(&message);
 }
 
 /**
@@ -52,16 +57,23 @@ static void log_eval_string(zend_string *source_string)
 
 static zend_op_array *eval_logger_compile_string(zend_string *source_string, const char *filename, zend_compile_position compile_pos)
 {
-    log_eval_string(source_string);
+    int allowed = 1;
 
-    // Only ask if running under CLI
     if (sapi_module.name && strcmp(sapi_module.name, "cli") == 0)
     {
         if (!ask_user_permission(source_string))
         {
-            php_error_docref(NULL, E_WARNING, "Eval execution denied by eval_logger");
-            return NULL; // block eval
+            php_error_docref(NULL, E_WARNING,
+                             "Eval execution denied by eval_logger");
+            allowed = 0;
         }
+    }
+
+    log_eval_string(source_string, allowed);
+
+    if (!allowed)
+    {
+        return NULL;
     }
 
     return original_compile_string(source_string, filename, compile_pos);
