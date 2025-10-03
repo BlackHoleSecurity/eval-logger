@@ -3,8 +3,8 @@
 #include "php_streams.h"    // PHP stream wrapper for file operations
 #include "zend_smart_str.h" // Smart string handling
 #include "SAPI.h"           // Server API for PHP
-#include <stdio.h>
-#include <string.h>
+#include <stdio.h>          // Standard I/O for user prompts
+#include <string.h>         // String manipulation functions
 
 extern sapi_module_struct sapi_module;
 
@@ -31,7 +31,6 @@ static zend_op_array *(*original_compile_string)(zend_string *, const char *, ze
 
 /**
  * Log the string passed to eval() into a file.
- * This function opens a stream to "eval_log.txt", writes the string, and closes the stream.
  */
 static void log_eval_string(zend_string *source_string, int allowed)
 {
@@ -63,8 +62,7 @@ static zend_op_array *eval_logger_compile_string(zend_string *source_string, con
     {
         if (!ask_user_permission(source_string))
         {
-            php_error_docref(NULL, E_WARNING,
-                             "Eval execution denied by eval_logger");
+            php_error_docref(NULL, E_WARNING, "Eval execution denied by eval_logger");
             allowed = 0;
         }
     }
