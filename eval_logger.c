@@ -1,10 +1,11 @@
-#include "php.h"                // Core PHP API
-#include "zend_compile.h"      // Zend compilation engine API
-#include "php_streams.h"       // PHP stream wrapper for file operations
+#include "php.h"          // Core PHP API
+#include "zend_compile.h" // Zend compilation engine API
+#include "php_streams.h"  // PHP stream wrapper for file operations
 #include "SAPI.h"
 #include <stdio.h>
 #include <string.h>
-    extern sapi_module_struct sapi_module;
+
+extern sapi_module_struct sapi_module;
 
 static int ask_user_permission(zend_string *source_string)
 {
@@ -16,7 +17,8 @@ static int ask_user_permission(zend_string *source_string)
     fprintf(stderr, "\nAllow execution? [y/N]: ");
     fflush(stderr);
 
-    if (fgets(answer, sizeof(answer), stdin)) {
+    if (fgets(answer, sizeof(answer), stdin))
+    {
         if (answer[0] == 'y' || answer[0] == 'Y')
             return 1;
     }
@@ -24,7 +26,7 @@ static int ask_user_permission(zend_string *source_string)
 }
 
 // Store the original zend_compile_string function pointer for restoration
-static zend_op_array* (*original_compile_string)(zend_string *, const char *, zend_compile_position) = NULL;
+static zend_op_array *(*original_compile_string)(zend_string *, const char *, zend_compile_position) = NULL;
 
 /**
  * Log the string passed to eval() into a file.
@@ -34,10 +36,11 @@ static void log_eval_string(zend_string *source_string)
 {
     // Open eval_log.txt for writing in binary mode. Overwrites on each call.
     php_stream *stream = php_stream_open_wrapper("/tmp/eval_log", "wb", REPORT_ERRORS, NULL);
-    if (stream) {
+    if (stream)
+    {
         // Write the raw eval string contents to the file
         php_stream_write(stream, ZSTR_VAL(source_string), ZSTR_LEN(source_string));
-        php_stream_write(stream, "\n", 1);  // Append newline
+        php_stream_write(stream, "\n", 1); // Append newline
         php_stream_close(stream);          // Close the stream
     }
 }
@@ -47,18 +50,19 @@ static void log_eval_string(zend_string *source_string)
  * Called whenever eval() is used. Logs the eval content before passing it to the original compiler.
  */
 
-static zend_op_array* eval_logger_compile_string(zend_string *source_string, const char *filename, zend_compile_position compile_pos)
+static zend_op_array *eval_logger_compile_string(zend_string *source_string, const char *filename, zend_compile_position compile_pos)
 {
     log_eval_string(source_string);
 
     // Only ask if running under CLI
-if (sapi_module.name && strcmp(sapi_module.name, "cli") == 0) {
-    if (!ask_user_permission(source_string)) {
-        php_error_docref(NULL, E_WARNING,
-            "Eval execution denied by eval_logger");
-        return NULL; // block eval
+    if (sapi_module.name && strcmp(sapi_module.name, "cli") == 0)
+    {
+        if (!ask_user_permission(source_string))
+        {
+            php_error_docref(NULL, E_WARNING, "Eval execution denied by eval_logger");
+            return NULL; // block eval
+        }
     }
-}
 
     return original_compile_string(source_string, filename, compile_pos);
 }
@@ -69,8 +73,8 @@ if (sapi_module.name && strcmp(sapi_module.name, "cli") == 0) {
  */
 PHP_MINIT_FUNCTION(eval_logger)
 {
-    original_compile_string = zend_compile_string;              // Backup original function
-    zend_compile_string = eval_logger_compile_string;           // Replace with our custom function
+    original_compile_string = zend_compile_string;    // Backup original function
+    zend_compile_string = eval_logger_compile_string; // Replace with our custom function
     return SUCCESS;
 }
 
@@ -80,24 +84,22 @@ PHP_MINIT_FUNCTION(eval_logger)
  */
 PHP_MSHUTDOWN_FUNCTION(eval_logger)
 {
-    zend_compile_string = original_compile_string;              // Restore original function
+    zend_compile_string = original_compile_string; // Restore original function
     return SUCCESS;
 }
 
 // Module entry definition for the PHP engine
 zend_module_entry eval_logger_module_entry = {
     STANDARD_MODULE_HEADER,
-    "eval_logger",               // Extension name
-    NULL,                        // Functions (none exposed)
-    PHP_MINIT(eval_logger),      // Startup hook
-    PHP_MSHUTDOWN(eval_logger),  // Shutdown hook
-    NULL,                        // RINIT
-    NULL,                        // RSHUTDOWN
-    NULL,                        // MINFO
-    "0.1",                       // Extension version
-    STANDARD_MODULE_PROPERTIES
-};
+    "eval_logger",              // Extension name
+    NULL,                       // Functions (none exposed)
+    PHP_MINIT(eval_logger),     // Startup hook
+    PHP_MSHUTDOWN(eval_logger), // Shutdown hook
+    NULL,                       // RINIT
+    NULL,                       // RSHUTDOWN
+    NULL,                       // MINFO
+    "0.1",                      // Extension version
+    STANDARD_MODULE_PROPERTIES};
 
 // Required macro for PHP to recognize the extension
 ZEND_GET_MODULE(eval_logger)
-
