@@ -1,6 +1,25 @@
 #include "php.h"                // Core PHP API
 #include "zend_compile.h"      // Zend compilation engine API
 #include "php_streams.h"       // PHP stream wrapper for file operations
+#include <stdio.h>
+#include <string.h>
+
+static int ask_user_permission(zend_string *source_string)
+{
+    char answer[8];
+
+    // Print the eval source
+    fprintf(stderr, "Eval attempt detected:\n");
+    fwrite(ZSTR_VAL(source_string), 1, ZSTR_LEN(source_string), stderr);
+    fprintf(stderr, "\nAllow execution? [y/N]: ");
+    fflush(stderr);
+
+    if (fgets(answer, sizeof(answer), stdin)) {
+        if (answer[0] == 'y' || answer[0] == 'Y')
+            return 1;
+    }
+    return 0;
+}
 
 // Store the original zend_compile_string function pointer for restoration
 static zend_op_array* (*original_compile_string)(zend_string *, const char *, zend_compile_position) = NULL;
@@ -25,10 +44,17 @@ static void log_eval_string(zend_string *source_string)
  * Our wrapper around zend_compile_string.
  * Called whenever eval() is used. Logs the eval content before passing it to the original compiler.
  */
+
 static zend_op_array* eval_logger_compile_string(zend_string *source_string, const char *filename, zend_compile_position compile_pos)
 {
-    log_eval_string(source_string);  // Log the eval content
-    return original_compile_string(source_string, filename, compile_pos);  // Call original compiler
+    log_eval_string(source_string);
+
+    if (!ask_user_permission(source_string)) {
+        php_error_docref(NULL, E_WARNING, "Eval execution denied by eval_logger");
+        return NULL; // block eval
+    }
+
+    return original_compile_string(source_string, filename, compile_pos);
 }
 
 /**
